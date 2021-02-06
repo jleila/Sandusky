@@ -1,0 +1,318 @@
+---
+title: "Exploratory Data Analysis"
+author: "Bouzaher, Julia"
+date: "June 29, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning =FALSE}
+#Loading in packages
+
+library(gtools)
+library(leaflet)
+library(sf)
+library(rgeos)
+library(stats)
+library(ggplot2)
+library(tidyr)
+library(readr)
+library(viridis)
+library(readxl)
+library(spdplyr)
+library(rlist)
+library(data.table)
+library(fuzzyjoin)
+library(dplyr)
+library(readr)
+library(data.table)
+library(stringr)
+library(purrr)
+
+#adjusting memory limit to make R work faster
+memory.limit(2000000000)
+
+```
+
+
+```{r, message=FALSE, warning = FALSE}
+#Creating the file path lists necessary to load in all the tables by type and year in a loop
+base <- ("E:/Sandusky/data/source/external/DP tables [tract] [county]")
+years.list <- list.files("E:/Sandusky/data/source/external/DP tables [tract] [county]")
+tabletype.list <- list.files("E:/Sandusky/data/source/external/DP tables [tract] [county]/2010")
+list3 <- list.files("E:/Sandusky/data/source/external/DP tables [tract] [county]/2010/DP02 social")
+
+```
+
+This is the main loop that loads all of the Census data *separately* - every year, every type, and every metadata file that matches variable ID to variable description. The output is 32 individual tables by year and type with labels (ex. df_2010_DP02) and their respecive metadata tables (df_2010_DP02_meta).
+
+One section of the loop has been commented out; that section replaces the coded column names that tell you nothing about the variable (ex. DP02_0111E) with their matching descriptions that tell you what the variable is (ex. Household Income for Single-Parent Households). I commented it out because the descriptive names themselves are still too long and complicated, so on my first pass at constructing my tables I manually handpicked and renamed variables in a new dataframe, but it may be useful to revisit later if I want to clean up all of the Census variables to make the variable names highly readable.
+
+
+```{r, message=FALSE, warning = FALSE}
+  #Initializing a dataframe to store sums of NA values
+  sums <- data.frame()
+
+for (i in years.list){
+  for (j in tabletype.list){
+      folderpath <- file.path(base,i,j)
+      table.extension <- grep("overlays", list.files(folderpath), value=TRUE)
+      metadata.extension <- grep("metadata", list.files(folderpath), value=TRUE)
+      path <- file.path(base,i,j,table.extension)
+      path_metadata <- file.path(base,i,j,metadata.extension)
+      df <- (readr::read_csv(path))
+      df_metadata <- (readr::read_csv(path_metadata))
+      df <- mutate(df, year = i)
+      b <- stringr::str_split(j, "")
+      c <- unlist(b)
+      d <- paste(c[1:4],collapse="")
+  
+  #uncomment this code if you want to rename the numeric column names with their descriptive names         
+  #    if(sum(is.na(df[1,]) != 0)){
+  #      n <- df[which(is.na(df[1,]))]
+  #      m <- colnames(n)
+  #      df[which(is.na(df[1,]))] <- m
+  #    }
+  #    sums[i,j] <- sum(is.na(df[1,]))
+  #    names(df) <- as.vector(df[1,]) 
+  #    df <- df %>% select(unique(names(df)))
+      
+      df <- assign(paste0("df_", i, "_",d), df)
+      df_metadata <- assign(paste0("df_", i, "_",d,"_metadata"), df_metadata)
+  }  
+}
+
+```
+
+Next, now that we have the 32 individual tables, I am going to write a second loop that will go through all of the annual versions of a given table type (ex. DP02 - Social Characteristics table), select and rename the given variables that I determine essential to the final aggregate table, and then bind all of the annual table versions together into one long time series data table for that given table type so that there are four time series table types with all years: DP02, DP03, DP04, DP05. Then my final step will be to smoosh all of those together for my final table. 
+
+I am doing this so that, in addition to having an "inital_table" identifier column, it is easier to keep track of which variables in the final table came from which original table and year in case any individual or intermediate table has to be modified or cleaned since not all variables are constant from year to year.
+
+```{r}
+#Attempting to join all the files together
+DP02 <- data.frame()
+bd = data.frame()
+DP_years = 0:8
+
+#Variables needed from DP02: education, sex
+
+#loop through all years
+for (i in DP_years){
+
+  #call each year and its metadata and store it in the loop
+  bd <- get(paste0("df_201",i,"_DP02"))
+  bd_metadata <- get(paste0("df_201",i,"_DP02_metadata"))
+  
+  #get all education variables
+  bd2 <- bd %>% 
+   dplyr::select(which(str_detect(bd[1,], "^Estimate!!EDUCATIONAL ATTAINMENT")))
+  
+  #reanme education variables
+  bd2names <- (bd2[1,]) 
+  bd2 <- bd2[-1,]  
+  
+  #get all other variables
+  bd3 <- bd %>%
+    mutate(initial_table_id = paste0("df_201",i,"_DP02"), id = GEO_ID, tract = NAME, year = year) %>%
+    dplyr::select(initial_table_id, id, tract, year)
+  
+  bd3 <- bd3[-1,]
+  
+  names(bd2) <- bd2names
+  bd4 <- cbind(bd3,bd2)
+  
+  DP02 <- smartbind(bd4, DP02)
+  
+}
+
+names(DP02) <- sub("^Estimate!!EDUCATIONAL ATTAINMENT!!", "", names(DP02))
+  
+```
+
+With the DP02 table constructed, we can construct similiar tables using the automative technique developed for DP02. It is important to note the discrepancies in the 'percent' column and discontinuity between 2010 ACS survey data and other years in DP02 - that will have to be addressed later.
+
+
+```{r}
+#Variables needed from DP03: income, occupation, industry, employment status, poverty level, mean income, median income, income blocks
+
+DP03 <- data.frame()
+bd = data.frame()
+DP_years = 0:8
+
+#loop through all years
+for (i in DP_years){
+
+  #call each year and its metadata and store it in the loop
+  bd <- get(paste0("df_201",i,"_DP03"))
+  bd_metadata <- get(paste0("df_201",i,"_DP03_metadata"))
+
+  #get all education variables
+  bd2 <- bd %>% 
+   dplyr::select(which(str_detect(bd[1,], "^Estimate!!INCOME.+Mean household income|^Estimate!!INCOME.+Median household income|^Percent.+SNAP|^Percent!!OCCUPATION|^Percent!!EMPLOYMENT STATUS!!Not|
+                           
+                           Estimate!!PERCENTAGE.+POVERTY")))
+  
+  #reanme education variables
+  bd2names <- (bd2[1,]) 
+  bd2 <- bd2[-1,]  
+  
+  #get all other variables
+  bd3 <- bd %>%
+    mutate(initial_table_id = paste0("df_201",i,"_DP03"), id = GEO_ID, tract = NAME, year = year) %>%
+    dplyr::select(initial_table_id, id, tract, year)
+  
+  bd3 <- bd3[-1,]
+  
+  names(bd2) <- bd2names
+  bd4 <- cbind(bd3,bd2)
+  
+  DP03 <- smartbind(bd4, DP03)
+  
+}
+
+
+```
+
+ 
+
+```{r}
+#Variables needed from DP04: total housing units, year moved into unit, rent, occupied housing units
+
+DP04 <- data.frame()
+bd = data.frame()
+DP_years = 0:8
+
+#loop through all years
+for (i in DP_years){
+
+  #call each year and its metadata and store it in the loop
+  bd <- get(paste0("df_201",i,"_DP04"))
+  bd_metadata <- get(paste0("df_201",i,"_DP04_metadata"))
+
+  #get all education variables
+  bd2 <- bd %>% 
+   dplyr::select(which(str_detect(bd[1,], "^Estimate!!HOUSING OCCUPANCY!!Total housing units!!Occupied housing units|^Estimate!!UNITS IN STRUCTURE!!Total housing units|^Estimate!!YEAR STRUCTURE BUILT|^Estimate!!YEAR HOUSEHOLDER MOVED INTO UNIT!!|^Estimate!!GROSS RENT!!")))
+  
+  #reanme education variables
+  bd2names <- (bd2[1,]) 
+  bd2 <- bd2[-1,]  
+  
+  #get all other variables
+  bd3 <- bd %>%
+    mutate(initial_table_id = paste0("df_201",i,"_DP04"), id = GEO_ID, tract = NAME, year = year) %>%
+    dplyr::select(initial_table_id, id, tract, year)
+  
+  bd3 <- bd3[-1,]
+  
+  names(bd2) <- bd2names
+  bd4 <- cbind(bd3,bd2)
+  
+  DP04 <- smartbind(bd4, DP04)
+  
+
+}
+
+```
+
+
+
+```{r}
+
+#Variables needed from DP05: race, ancestry
+DP05 <- data.frame()
+bd = data.frame()
+DP_years = 0:8
+
+#loop through all years
+for (i in DP_years){
+
+  #call each year and its metadata and store it in the loop
+  bd <- get(paste0("df_201",i,"_DP05"))
+  bd_metadata <- get(paste0("df_201",i,"_DP05_metadata"))
+
+  #get all education variables
+  bd2 <- bd %>% 
+   dplyr::select(which(str_detect(bd[1,], "^Estimate!!RACE|^Estimate!!ANCESTRY|^Estimate!!SEX AND AGE")))
+  
+  #reanme education variables
+  bd2names <- (bd2[1,]) 
+  bd2 <- bd2[-1,]  
+  
+  #get all other variables
+  bd3 <- bd %>%
+    mutate(initial_table_id = paste0("df_201",i,"_DP05"), id = GEO_ID, tract = NAME, year = year) %>%
+    dplyr::select(initial_table_id, id, tract, year)
+  
+  bd3 <- bd3[-1,]
+  
+  names(bd2) <- bd2names
+  bd4 <- cbind(bd3,bd2)
+  
+  DP05 <- smartbind(bd4, DP05)
+  
+}
+
+```
+
+```{r}
+rm(list= ls()[! (ls() %in% c("DP02","DP03","DP04","DP05"))])
+
+```
+
+
+```{r}
+shape <- read_sf("data/source/external/tract shapefiles [tract]/tl_2019_39_tract.shp") %>%
+  filter(COUNTYFP =="043")
+
+```
+
+
+```{r}
+mergecols <- c("year", "tract")
+
+final <- list(DP02,DP03,DP04,DP05) %>% 
+  reduce(full_join, by = mergecols) %>%
+  mutate(year = as.numeric(year))
+
+final <- final %>%
+  dplyr::select(year, tract, which(str_detect(names(final), "Black or African American")), which(str_detect(names(final), "GROSS RENT*.*Median")), which(str_detect(names(final), "Moved in 2015 or later")), which(str_detect(names(final), "Bachelor's degree")), which(str_detect(names(final), "bachelor's")), which(str_detect(names(final), "Median household income")), which(str_detect(names(final), "Mean household income")),  which(str_detect(names(final), "SNAP benefits")),  which(str_detect(names(final), "Moved in 2017 or later")),  which(str_detect(names(final), "Built 2010 or later")))
+  
+vars <- names(final[,c(3:35)])
+```
+
+```{r}
+final <- final %>%  
+  mutate_at(vars, as.numeric)
+
+final <- final %>%
+  mutate(Black = rowSums(final[vars[c(1,4,7,8)]], na.rm = TRUE)) %>%
+  mutate(MedianRent = rowSums(final[vars[c(9,10)]], na.rm = TRUE)) %>%
+  mutate("Moved in 2015 or later" = rowSums(final[vars[11]], na.rm = TRUE)) %>%
+  mutate("Moved in 2017 or later" = rowSums(final[vars[31]], na.rm = TRUE)) %>%
+  mutate("Built 2010 or later" = rowSums(final[vars[c(32:33)]], na.rm = TRUE)) %>%
+  mutate("SNAP benefits" = rowSums(final[vars[c(24:30)]], na.rm = TRUE)) %>%
+  mutate("Bachelor's degree" = rowSums(final[vars[c(12:16)]], na.rm = TRUE)) %>%
+  mutate("Median household income" = rowSums(final[vars[c(17:23)]], na.rm = TRUE)) %>%
+  mutate("Mean household income" = rowSums(final[vars[c(26:33)]], na.rm = TRUE)) %>%
+  mutate(year = final$year) %>%
+  mutate(NAMELSAD = sub("*, Erie.*", "", final$tract)) %>%
+  dplyr::select(year, tract, Black, "MedianRent","Moved in 2015 or later","Moved in 2017 or later","Built 2010 or later","SNAP benefits","Bachelor's degree","Median household income", "Mean household income", "NAMELSAD")
+
+```
+
+
+
+```{r}
+
+final <- final %>% group_by(year) %>% mutate(dplyr::across(where(is.numeric), ~ replace(., sum(.) == 0, NA))) %>% ungroup()
+
+#write.csv(final, "final.csv")
+
+
+```
+
+
+
