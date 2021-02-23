@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, message=FALSE, warning =FALSE}
+
 #Loading in packages
 
 library(gtools)
@@ -39,6 +40,7 @@ memory.limit(2000000000)
 
 
 ```{r, message=FALSE, warning = FALSE}
+
 #Creating the file path lists necessary to load in all the tables by type and year in a loop
 base <- ("E:/Sandusky/data/source/external/DP tables [tract] [county]")
 years.list <- list.files("E:/Sandusky/data/source/external/DP tables [tract] [county]")
@@ -47,13 +49,14 @@ list3 <- list.files("E:/Sandusky/data/source/external/DP tables [tract] [county]
 
 ```
 
-This is the main loop that loads all of the Census data *separately* - every year, every type, and every metadata file that matches variable ID to variable description. The output is 32 individual tables by year and type with labels (ex. df_2010_DP02) and their respecive metadata tables (df_2010_DP02_meta).
+This is the main loop that loads all of the Census data separately - every year, every type, and every metadata file that matches variable ID to variable description. The output is 32 individual tables by year and type with labels (ex. df_2010_DP02) and their respecive metadata tables (df_2010_DP02_meta).
 
 One section of the loop has been commented out; that section replaces the coded column names that tell you nothing about the variable (ex. DP02_0111E) with their matching descriptions that tell you what the variable is (ex. Household Income for Single-Parent Households). I commented it out because the descriptive names themselves are still too long and complicated, so on my first pass at constructing my tables I manually handpicked and renamed variables in a new dataframe, but it may be useful to revisit later if I want to clean up all of the Census variables to make the variable names highly readable.
 
 
 ```{r, message=FALSE, warning = FALSE}
-  #Initializing a dataframe to store sums of NA values
+
+#Initializing a dataframe to store sums of NA values
   sums <- data.frame()
 
 for (i in years.list){
@@ -61,25 +64,14 @@ for (i in years.list){
       folderpath <- file.path(base,i,j)
       table.extension <- grep("overlays", list.files(folderpath), value=TRUE)
       metadata.extension <- grep("metadata", list.files(folderpath), value=TRUE)
-      path <- file.path(base,i,j,table.extension)
       path_metadata <- file.path(base,i,j,metadata.extension)
+      path <- file.path(base,i,j,table.extension)
       df <- (readr::read_csv(path))
       df_metadata <- (readr::read_csv(path_metadata))
       df <- mutate(df, year = i)
       b <- stringr::str_split(j, "")
       c <- unlist(b)
       d <- paste(c[1:4],collapse="")
-  
-  #uncomment this code if you want to rename the numeric column names with their descriptive names         
-  #    if(sum(is.na(df[1,]) != 0)){
-  #      n <- df[which(is.na(df[1,]))]
-  #      m <- colnames(n) 
-  #      df[which(is.na(df[1,]))] <- m
-  #    }
-  #    sums[i,j] <- sum(is.na(df[1,]))
-  #    names(df) <- as.vector(df[1,]) 
-  #    df <- df %>% select(unique(names(df)))
-      
       df <- assign(paste0("df_", i, "_",d), df)
       df_metadata <- assign(paste0("df_", i, "_",d,"_metadata"), df_metadata)
   }  
@@ -87,7 +79,7 @@ for (i in years.list){
 
 ```
 
-Next, now that we have the 32 individual tables, I am going to write a second loop that will go through all of the annual versions of a given table type (ex. DP02 - Social Characteristics table), select and rename the given variables that I determine essential to the final aggregate table, and then bind all of the annual table versions together into one long time series data table for that given table type so that there are four time series table types with all years: DP02, DP03, DP04, DP05. Then my final step will be to smoosh all of those together for my final table. 
+Next, now that we have the 32 individual tables, I am going to write a second loop that will go through all of the annual versions of a given table type (ex. DP02 - Social Characteristics table), select and rename the given variables that I determine essential to the final aggregate table, and then bind all of the annual table versions together into one long time series data table for that given table type so that there are four time series table types with all years: DP02, DP03, DP04, DP05. Then my final step will be to combine all of those together for my final table. 
 
 I am doing this so that, in addition to having an "inital_table" identifier column, it is easier to keep track of which variables in the final table came from which original table and year in case any individual or intermediate table has to be modified or cleaned since not all variables are constant from year to year.
 
@@ -110,7 +102,7 @@ for (i in DP_years){
   bd2 <- bd %>% 
    dplyr::select(which(str_detect(bd[1,], "^Estimate!!EDUCATIONAL ATTAINMENT")))
   
-  #reanme education variables
+  #rename education variables
   bd2names <- (bd2[1,]) 
   bd2 <- bd2[-1,]  
   
@@ -132,7 +124,7 @@ names(DP02) <- sub("^Estimate!!EDUCATIONAL ATTAINMENT!!", "", names(DP02))
   
 ```
 
-With the DP02 table constructed, we can construct similiar tables using the automative technique developed for DP02. It is important to note the discrepancies in the 'percent' column and discontinuity between 2010 ACS survey data and other years in DP02 - that will have to be addressed later.
+With the DP02 table constructed, we can construct similar tables with the same automatic technique for the DP03 data.
 
 
 ```{r}
@@ -155,7 +147,7 @@ for (i in DP_years){
                            
                            Estimate!!PERCENTAGE.+POVERTY")))
   
-  #reanme education variables
+  #rename education variables
   bd2names <- (bd2[1,]) 
   bd2 <- bd2[-1,]  
   
@@ -176,7 +168,9 @@ for (i in DP_years){
 
 ```
 
- 
+
+With the DP02 table constructed, we can construct similar tables with the same automatic technique for the DP04 data.
+
 
 ```{r}
 #Variables needed from DP04: total housing units, year moved into unit, rent, occupied housing units
@@ -196,7 +190,7 @@ for (i in DP_years){
   bd2 <- bd %>% 
    dplyr::select(which(str_detect(bd[1,], "^Estimate!!HOUSING OCCUPANCY!!Total housing units!!Occupied housing units|^Estimate!!UNITS IN STRUCTURE!!Total housing units|^Estimate!!YEAR STRUCTURE BUILT|^Estimate!!YEAR HOUSEHOLDER MOVED INTO UNIT!!|^Estimate!!GROSS RENT!!")))
   
-  #reanme education variables
+  #rename education variables
   bd2names <- (bd2[1,]) 
   bd2 <- bd2[-1,]  
   
@@ -218,6 +212,8 @@ for (i in DP_years){
 ```
 
 
+With the DP02 table constructed, we can construct similar tables with the same automatic technique for the DP05 data.
+
 
 ```{r}
 
@@ -237,7 +233,7 @@ for (i in DP_years){
   bd2 <- bd %>% 
    dplyr::select(which(str_detect(bd[1,], "^Estimate!!RACE|^Estimate!!ANCESTRY|^Estimate!!SEX AND AGE")))
   
-  #reanme education variables
+  #rename education variables
   bd2names <- (bd2[1,]) 
   bd2 <- bd2[-1,]  
   
@@ -257,20 +253,16 @@ for (i in DP_years){
 
 ```
 
+Now that all of the aggregated time series tables have been constructed by type, we can remove all of the earlier tables.
+
 ```{r}
 rm(list= ls()[! (ls() %in% c("DP02","DP03","DP04","DP05"))])
 
 ```
 
+Defining the variables which we will use to merge our tables as "year" and "tract" (if we just picked year, our merge might muddle all the tracts together and vice versa), we merge all table types together, make sure year is treated as a numeric variable, and then we select only the variables we want. We use str_detect() to select all variables named with a certain topic (since there are different varieties for percentages/estimates, and then use which() to extract the ID, not the boolean, for dplyr::select() to operate on.
 
-```{r}
-shape <- read_sf("data/source/external/tract shapefiles [tract]/tl_2019_39_tract.shp") %>%
-  filter(COUNTYFP =="043")
-
-```
-
-
-```{r}
+```{r, error=FALSE, warning=FALSE}
 mergecols <- c("year", "tract")
 
 final <- list(DP02,DP03,DP04,DP05) %>% 
@@ -280,10 +272,14 @@ final <- list(DP02,DP03,DP04,DP05) %>%
 final <- final %>%
   dplyr::select(year, tract, which(str_detect(names(final), "Black or African American")), which(str_detect(names(final), "GROSS RENT*.*Median")), which(str_detect(names(final), "Moved in 2015 or later")), which(str_detect(names(final), "Bachelor's degree")), which(str_detect(names(final), "bachelor's")), which(str_detect(names(final), "Median household income")), which(str_detect(names(final), "Mean household income")),  which(str_detect(names(final), "SNAP benefits")),  which(str_detect(names(final), "Moved in 2017 or later")),  which(str_detect(names(final), "Built 2010 or later")))
   
+#all variables besides year and tract
 vars <- names(final[,c(3:35)])
 ```
 
-```{r}
+Now, we convert all non-basic (year,tract) variables to numeric values, remove NAs, and merge identical columns that received different names over various iterations of Census data. Lastly, select all the variables needed.
+
+```{r, error=FALSE, warning=FALSE}
+
 final <- final %>%  
   mutate_at(vars, as.numeric)
 
@@ -304,12 +300,11 @@ final <- final %>%
 ```
 
 
+For variables that are all 0 for a given year (group by year), replace the 0s with all NAs. Otherwise, the Shiny App will display zeros and indicate a drop in value instead of displaying that the data is unavailable for a given year.
 
 ```{r}
-
 final <- final %>% group_by(year) %>% mutate(dplyr::across(where(is.numeric), ~ replace(., sum(.) == 0, NA))) %>% ungroup()
-
-
+ 
 ```
 
 
