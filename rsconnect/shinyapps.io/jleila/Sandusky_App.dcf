@@ -1,0 +1,13 @@
+name: Sandusky_App
+title: Sandusky_App
+username:
+account: jleila
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3674296
+bundleId: 4253603
+url: https://jleila.shinyapps.io/Sandusky_App/
+when: 1613946869.68001
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|extra data
