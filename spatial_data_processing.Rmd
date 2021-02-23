@@ -11,7 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Let's test the shapefile.
 
-
 ```{r}
 library(rgeos)
 library(sp)
@@ -39,12 +38,13 @@ library(stats)
 
 ```
 
+Load in shapefile and filter for Erie County. Check the coordinate reference systems. Join the shapefile with the "final" census dataset by tract and remove unnecessary shapefile features. Then, reset coordinate reference system to 4326 again.
+
 ```{r}
 shape <- read_sf("data/source/external/tract shapefiles [tract]/tl_2019_39_tract.shp") %>%
   filter(COUNTYFP =="043")
 
 shape <- st_transform(shape, 4326)
-
 
 crs(shape)
 crs(final)
@@ -56,14 +56,12 @@ final <- full_join(final,shape, by="NAMELSAD") %>%
   dplyr::select(-(c(STATEFP,COUNTYFP,TRACTCE,GEOID,NAME,NAMELSAD,MTFCC,FUNCSTAT,INTPTLON,INTPTLAT))) %>%
   mutate(medianincome = as.numeric(final$`Median household income`))
 
-
 final <- st_sf(final)
 final <- st_transform(final, 4326)
 
-
 ```
 
-Map 1: Distribution of Black/African American Population
+Construction of a sample map. Map 1: Distribution of Black/African American Population
 
 ```{r}
 
@@ -80,7 +78,7 @@ leaflet(final) %>%
 
 ```
 
-Map 2: Distribution of Median Rents
+Construction of a sample map. Map 2: Distribution of Median Rents
 
 ```{r}
 
@@ -103,7 +101,7 @@ map <- leaflet(final %>% filter(year == "2018")) %>%
 
 ```
 
-Let's take a look at our other files.
+Construction of a sample map. Map 3: View the GLRI Pathway Polygons.
 
 ```{r}
 GLRI <- read_sf("data/source/city/GLRI Pathway/Polygon_layer.shp")
@@ -115,6 +113,7 @@ leaflet(GLRI) %>%
 
 ```
 
+Construction of a sample map. Map 4: View the Neighborhood Polygons.
 
 ```{r}
 Neighborhoods <- read_sf("data/source/city/Neighborhoods/City_of_Sandusky_Neighborhoods.shp")
@@ -126,22 +125,17 @@ leaflet(Neighborhoods) %>%
 
 ```
 
+Load in Wetlands data, Parks data, and Leaf Icons. Map 5: View the Wetlands data, Parks data, and Leaf Icons.
 
 ```{r}
 
-#wetlands data
-
-library(raster)
+#wetlands data as a result of two Wetlands areas being merged
 Wetlands <- read_sf("data/source/external/wetlands data/HU8_04100011_Watershed/HU8_04100011_Wetlands.shp")
 Wetlands2 <- read_sf("data/source/external/wetlands data/HU8_04100012_Watershed/HU8_04100012_Wetlands.shp")
-
 Wetlands <- st_transform(Wetlands, CRS("+init=epsg:4326"))
 Wetlands2 <- st_transform(Wetlands2, CRS("+init=epsg:4326"))
-
 Wetlands3 <- rbind(Wetlands, Wetlands2)
-
 Wetlands3 <- st_crop(Wetlands3, xmin = -82.918968, xmax = -82.314877,  ymin = 41.277963, ymax = 41.483993)
-
 
 #parks names data
 parks <- fread("data/source/external/Parks/OH_Features_20200901.txt") %>%
@@ -150,9 +144,6 @@ parks <- fread("data/source/external/Parks/OH_Features_20200901.txt") %>%
   rename(lat = PRIM_LAT_DEC, long = PRIM_LONG_DEC)
 
 #land cover data
-
-
-
 leafIcons <- icons(
   iconUrl = 
     "http://leafletjs.com/examples/custom-icons/leaf-green.png",
@@ -160,40 +151,15 @@ leafIcons <- icons(
   iconAnchorX = 14, iconAnchorY = 40
 )
 
+leaflet() %>%
+  addProviderTiles(providers$OpenStreetMap) %>%
+addPolygons(data = Wetlands3, group = "Wetlands", stroke = TRUE, weight=.4, opacity = 1) %>%
+addMarkers(data = parks, icon = leafIcons, group = "Parks", popup = ~(FEATURE_NAME))
+
 
 ```
 
-
-
-
-```{r}
-library(rgeos)
-library(sp)
-library(sf)
-library(rgeos)
-library(magrittr)
-library(dplyr)
-library(readr)
-library(gridExtra)
-library(ggplot2)
-library(data.table)
-library(rgdal)
-library(lubridate) 
-library(stringr)
-library(rgdal)
-library(sf) 
-library(sp)
-library(rgeos)
-library(leaflet)
-library(raster)
-library(dplyr)
-library(maptools)
-library(lwgeom)
-library(spatialEco)
-library(stats)
-
-```
-
+Now, let's begin the raster processing. To read in all of the rasters:
 
 ```{r}
 
@@ -212,11 +178,10 @@ landcover2001 <- raster::raster("data/source/external/landcover data/US_105EVC/u
 ```
 
 
-Filter/Mask for non-desired categories
+Filter/Mask for non-desired categories for each of the raster years. 
+
 
 ```{r}
-# labels22001<- c("Developed - Forested", "Developed - herbaceous or shrubland", "Developed - Low Intensity", "Developed - Medium Intensity", "Developed - High Intensity", "Herbaceous Wetlands", "Tree Cover 0-50%", "Tree Cover 50-100%", "Herb Cover 0-50%", "Herb Cover 50-100%", "Shrub Cover", "Cropland", "Barren or Quarry Land")
-
 #landcover 2001
 landcover2001@data@attributes[[1]]$ID
 landcover2001@data@attributes[[1]]$CLASSNAMES
@@ -486,3 +451,4 @@ leaflet() %>%
      options = layersControlOptions(collapsed = TRUE))
 
 ```
+
