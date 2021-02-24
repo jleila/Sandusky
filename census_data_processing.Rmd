@@ -1,5 +1,5 @@
 ---
-title: "Exploratory Data Analysis"
+title: "census_data_processing"
 author: "Bouzaher, Julia"
 date: "June 29, 2020"
 output: html_document
