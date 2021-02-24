@@ -179,7 +179,8 @@ landcover2001 <- raster::raster("data/source/external/landcover data/US_105EVC/u
 
 
 Filter/Mask for non-desired categories for each of the raster years. 
-
+A common quartile-esque labels system was determined for consistency across years (some years had 10% intervals, other years did not) and
+rasters were reclassified accordingly. Note the use of c() to construct a proper reclassification matrix.
 
 ```{r}
 #landcover 2001
@@ -212,7 +213,6 @@ u <- landcover2001@data@attributes[[1]]$ID[which(landcover2001@data@attributes[[
 rangemin <- c(g,f,a,d,h,p,q,s,t)
 rangemax <- c(g,f,c,e,o,q,r,t,u)
 
-c(h,o)
 labels2<- c("Developed - Medium/High Intensity","Developed - Low/Medium Intensity","Developed - Forested", "Developed - herbaceous or shrubland", "Cropland","Tree Cover 0-50%", "Tree Cover 50-100%","Herb Cover 0-50%", "Herb Cover 50-100%", "NA")
 
 rc <- data.frame(cbind(rangemin, rangemax,1:9))
