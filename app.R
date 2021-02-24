@@ -78,6 +78,11 @@ sidebar <- dashboardSidebar(
       strong("of environmental data, like a map of all"),
       br(),
       strong("the streams that flow through the city."),
+      br(),
+      br(),
+      strong("If the legend duplicates, refresh"),
+      br(),
+      strong("by clicking the year or variable."),
       hr())),
       sliderInput("year", "Select Year:", min = min(final$year), max = max(final$year), value = 2010, step = 1, sep = ""),
       selectInput("variable", "US Census Variables:", choices = names(as.data.frame(final) %>% dplyr::select(-c(year,tract,geometry))), multiple = FALSE)
@@ -138,6 +143,7 @@ server <- function(input, output, session) {
         addRasterImage(ras_2010, pal4, opacity = 1, group = "Land Cover 2010") %>%
         addRasterImage(ras_2008, pal5, opacity = 1, group = "Land Cover 2008") %>%
         addRasterImage(ras_2001, pal6, opacity = 1, group = "Land Cover 2001")
+        
       
   })
   
@@ -148,7 +154,6 @@ server <- function(input, output, session) {
     pal <- colorpal()
     proxy <- leafletProxy("map", data = filteredData()) %>%
       clearControls() %>%
-      # addLegend(position ="bottomleft", pal = pal, group = "Land Cover", na.label = "N/A for Current Year", labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE)), values = ~filteredData()[[1]], opacity=1, title = "Land Cover Legend") %>%
       addPolygons(label = ~paste ("Tract:", tract, paste0(input$variable,":"),as.numeric(eval(as.symbol(input$variable)))),
                   fillColor = ~pal(as.numeric(eval(as.symbol(input$variable)))),
                   weight = 1,
@@ -162,11 +167,9 @@ server <- function(input, output, session) {
       addLegend(pal = pal4, opacity = 1, values = values(ras_2010), labFormat = function(type, cuts, p) {paste0(labels2)}, group = "Land Cover Legend", title = "Land Cover Legend") %>%
       addLegend(position ="bottomleft", pal = pal, group = "Display Census Data", na.label = "N/A for Current Year", labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE)), values = ~filteredData()[[1]], opacity=1, title = "Census Data Legend") %>%
       addLayersControl(
-        overlayGroups = c("Display Census Data","Parks","Wetlands","Land Cover Legend", "Downtown Neighborhood Lines","Sandusky Bay Pathway","Land Cover 2001", "Land Cover 2008", "Land Cover 2010", "Land Cover 2012", "Land Cover 2014", "Land Cover 2016"),
+        overlayGroups = c("Display Census Data", "Parks","Wetlands", "Downtown Neighborhood Lines","Sandusky Bay Pathway","Land Cover 2001", "Land Cover 2008", "Land Cover 2010", "Land Cover 2012", "Land Cover 2014", "Land Cover 2016", "Land Cover Legend"),
         options = layersControlOptions(collapsed = FALSE)
         )
-    
-      
      
     })
   
