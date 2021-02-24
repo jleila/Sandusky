@@ -53,8 +53,7 @@ factpal <- colorFactor(palette = magma(19), domain = shape$TRACTCE)
 
 final <- full_join(final,shape, by="NAMELSAD") %>%
   mutate(tract = NAMELSAD) %>%
-  dplyr::select(-(c(STATEFP,COUNTYFP,TRACTCE,GEOID,NAME,NAMELSAD,MTFCC,FUNCSTAT,INTPTLON,INTPTLAT))) %>%
-  mutate(medianincome = as.numeric(final$`Median household income`))
+  dplyr::select(-(c(STATEFP,COUNTYFP,TRACTCE,GEOID,NAME,NAMELSAD,MTFCC,FUNCSTAT,INTPTLON,INTPTLAT)))
 
 final <- st_sf(final)
 final <- st_transform(final, 4326)

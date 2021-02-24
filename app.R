@@ -21,6 +21,9 @@ leafIcons <- icons(
 
 labels2<- c("Developed - Medium/High Intensity","Developed - Low/Medium Intensity","Developed - Forested", "Developed - herbaceous or shrubland", "Cropland","Tree Cover 0-50%", "Tree Cover 50-100%","Herb Cover 0-50%", "Herb Cover 50-100%", "NA")
 final <- read_sf("data/derived/final.shp")
+#must be called because write_sf ruins column names
+final_names <- fread("data/derived/final_colnames.txt")
+names(final) <- names(final_names)
 Wetlands3 <- read_sf("data/derived/Wetlands3.shp")
 Neighborhoods <- read_sf("data/source/city/Neighborhoods/City_of_Sandusky_Neighborhoods.shp")
 # Neighborhoods <- st_transform(Neighborhoods, 4326)

@@ -11,6 +11,8 @@ This document saves all of the derived dataframes and shapefiles so that the Shi
 library(raster)
 
 st_write(final, dsn="data/derived/final.shp", delete_dsn= TRUE)
+fwrite(as.list(names(final)), file="data/derived/final_colnames.txt")
+
 st_write(Wetlands3, dsn="data/derived/Wetlands3.shp", delete_dsn= TRUE)
 fwrite(parks, file="data/derived/parks.txt")
 
