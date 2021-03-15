@@ -1,0 +1,77 @@
+---
+title: "10_Questions"
+author: "Bouzaher, Julia"
+date: "3/14/2021"
+output: html_document
+---
+☺
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(sp)
+library(data.table)
+library(readxl)
+library(sf)
+
+final <- read_sf("data/derived/final.shp")
+
+final_names <- fread("data/derived/final_colnames.txt")
+names(final) <- names(final_names)
+
+land <- final %>%
+  dplyr::select(year, tract, ALAND, Total_Pop, Black, final$`Median household income`) %>%
+  unique()
+
+park_count <- read_excel("data/derived/park_count.xlsx")
+
+land <- cbind(land, park_count$`Number of County Parks`)
+
+land <- land %>%
+  rename(park_count = park_count..Number.of.County.Parks.) 
+
+land <- land %>%
+  mutate(park_by_land = (ALAND/park_count)*100) %>%
+  mutate(parks_per_capita = 1000*(park_count/as.numeric(Total_Pop))) %>%
+  mutate(parks_per_capita_b = 1000*(park_count/as.numeric(Black))) %>%
+  filter(tract != "Census Tract 9901")
+
+# ggplot(land, aes(x=year,y=parks_per_capita, fill = tract)) +
+#  # geom_smooth() +
+#   geom_point(fill = TRUE)
+
+land2 <- cbind(land, final$`Median household income`)
+
+```
+
+#Figures
+```{r}
+
+library(ggthemes)
+
+#over time for total pop
+plot1 <- ggplot(data=land, aes(x=as.numeric(year), y=parks_per_capita, fill=tract)) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  labs(title = "Parks per capita by tract and year", x = "Year", y = "Parks Per Capita (x1000)")
+
+print(plot1 + ggthemes::theme_clean() + scale_x_continuous(breaks=unique(land$year)))
+print(plot1 + ggthemes::theme_hc() + scale_x_continuous(breaks=unique(land$year)))
+
+
+
+#over time for total pop
+plot2 <- ggplot(data=land, aes(x=year, y=parks_per_capita_b, fill=tract)) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  labs(title = "Parks per capita (Black Individuals only)",  x = "Year", y = "Parks Per Capita (x1000)")
+
+print(plot2 + ggthemes::theme_clean() + scale_x_continuous(breaks=unique(land$year)))
+
+class(land$park_count)
+class(land$Total_Pop)
+
+```

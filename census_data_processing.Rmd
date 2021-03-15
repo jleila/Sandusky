@@ -231,7 +231,8 @@ for (i in DP_years){
 
   #get all education variables
   bd2 <- bd %>% 
-   dplyr::select(which(str_detect(bd[1,], "^Estimate!!RACE|^Estimate!!ANCESTRY|^Estimate!!SEX AND AGE")))
+   dplyr::select(which(str_detect(bd[1,], "^Estimate!!RACE|^Estimate!!ANCESTRY|^Estimate!!SEX AND AGE")),
+                 which(str_detect(bd[1,], "^Total Population*")))
   
   #rename education variables
   bd2names <- (bd2[1,]) 
@@ -270,7 +271,7 @@ final <- list(DP02,DP03,DP04,DP05) %>%
   mutate(year = as.numeric(year))
 
 final <- final %>%
-  dplyr::select(year, tract, which(str_detect(names(final), "Black or African American")), which(str_detect(names(final), "GROSS RENT*.*Median")), which(str_detect(names(final), "Moved in 2015 or later")), which(str_detect(names(final), "Bachelor's degree")), which(str_detect(names(final), "bachelor's")), which(str_detect(names(final), "Median household income")), which(str_detect(names(final), "Mean household income")),  which(str_detect(names(final), "SNAP benefits")),  which(str_detect(names(final), "Moved in 2017 or later")),  which(str_detect(names(final), "Built 2010 or later")))
+  dplyr::select(year, tract, which(str_detect(names(final), "Black or African American")), which(str_detect(names(final), "GROSS RENT*.*Median")), which(str_detect(names(final), "Moved in 2015 or later")), which(str_detect(names(final), "Bachelor's degree")), which(str_detect(names(final), "bachelor's")), which(str_detect(names(final), "Median household income")), which(str_detect(names(final), "Mean household income")),  which(str_detect(names(final), "SNAP benefits")),  which(str_detect(names(final), "Moved in 2017 or later")),  which(str_detect(names(final), "Built 2010 or later")), `Estimate!!RACE!!Total population`)
   
 #all variables besides year and tract
 vars <- names(final[,c(3:35)])
@@ -295,7 +296,8 @@ final <- final %>%
   mutate("Mean household income" = rowSums(final[vars[c(26:33)]], na.rm = TRUE)) %>%
   mutate(year = final$year) %>%
   mutate(NAMELSAD = sub("*, Erie.*", "", final$tract)) %>%
-  dplyr::select(year, tract, Black, "MedianRent","Moved in 2015 or later","Moved in 2017 or later","Built 2010 or later","SNAP benefits","Bachelor's degree","Median household income", "Mean household income", "NAMELSAD")
+  mutate(Total_Pop = `Estimate!!RACE!!Total population`) %>%
+  dplyr::select(year, tract, Total_Pop, Black, "MedianRent","Moved in 2015 or later","Moved in 2017 or later","Built 2010 or later","SNAP benefits","Bachelor's degree","Median household income", "Mean household income", "NAMELSAD")
 
 ```
 

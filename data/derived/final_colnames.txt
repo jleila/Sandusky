@@ -1,0 +1,1 @@
+year,tract,Total_Pop,Black,MedianRent,Moved in 2015 or later,Moved in 2017 or later,Built 2010 or later,SNAP benefits,Bachelor's degree,Median household income,Mean household income,ALAND,AWATER,geometry
