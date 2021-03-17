@@ -25,7 +25,7 @@ final_names <- fread("data/derived/final_colnames.txt")
 names(final) <- names(final_names)
 
 land <- final %>%
-  dplyr::select(year, tract, ALAND, Total_Pop, Black, final$`Median household income`) %>%
+  dplyr::select(year, tract, ALAND, Total_Pop, Black) %>%
   unique()
 
 park_count <- read_excel("data/derived/park_count.xlsx")
@@ -44,8 +44,8 @@ land <- land %>%
 # ggplot(land, aes(x=year,y=parks_per_capita, fill = tract)) +
 #  # geom_smooth() +
 #   geom_point(fill = TRUE)
-
-land2 <- cbind(land, final$`Median household income`)
+# 
+# land2 <- cbind(land, final$`Median household income`)
 
 ```
 
@@ -93,12 +93,13 @@ f <- cbind(f,c("Developed - Medium/High Intensity","Developed - Low/Medium Inten
 
 names(f) <- c("Land Cover ID", "2001 Count", "2008 Count", "2010 Count", "2012 Count", "2014 Count", "2016 Count", "Land Cover Description")
 f[,2]
+
 f <- rbind(f, c("Totals", sum(f[,2]), sum(f[,3]), sum(f[,4]), sum(f[,4]), sum(f[,5]), sum(f[,6]), sum(f[,7]), "Totals"))
 
 f[11,8] <- "Totals"
 
 raster_table <- f %>%
-  select(`Land Cover ID`, `Land Cover Description`, `2001 Count`,  `2008 Count`, `2010 Count`, `2012 Count`, `2014 Count`, `2016 Count`)
+  dplyr::select(`Land Cover ID`, `Land Cover Description`, `2001 Count`,  `2008 Count`, `2010 Count`, `2012 Count`, `2014 Count`, `2016 Count`)
 
 counts <- raster_table[,c(3:8)]
 
@@ -117,9 +118,6 @@ names(final_table) <- c("Land Cover ID","Land Cover Description", "2001 Percenta
 
 print(final_table)
 
-
-
-
 write.table(final_table, file = "mtcars.txt", sep = "\t",
             row.names = TRUE, col.names = NA)
 
@@ -133,16 +131,123 @@ Point 6: Correlation Matrix
 #intersect raster and r
 #add park counts
 
-intersect <- intersect(ras_2016, final)
-#https://rspatial.org/raster/rosu/Chapter11.html
+
+table <- data.frame() %>%
+  mutate(col_1 = ras_2016@data@attributes[1])
+
+
+# tract = row  
+# ----- ----------|  Black Individuals | Number of Parks | Tree Cover 
+
+#merge land dataframe with rasters
+
+
 
 ```
 
-Point 7: Change in Demographics in Downtown tracts over time:
+```{r}
+land2 <- land %>% 
+  filter(tract == "Census Tract 406")
+
+#tryit <- crop(x = ras_2016, y = land2)
+
+land2 <- st_transform(land2, crs(ras_2016))
+
+tryit <- mask(ras_2016, land2)
+
+leaflet(land) %>%
+  addProviderTiles(provider = providers$OpenStreetMap) %>%
+  addRasterImage(tryit) %>%
+  addPolylines() 
+```
+
+
+Iterative Version
+
+```{r}
+years <- c(2001,2008,2010,2012,2014,2016)
+tracts <- unique(final$tract)[1:18]
+
+#template
+for (i in years){
+  for(j in tracts){
+  #print(j)
+  }
+}
+
+leaflet(land) %>%
+  addProviderTiles(provider = providers$OpenStreetMap) %>%
+  addRasterImage(`ras2001_Census Tract 403`) %>%
+  addPolylines()  
+
+Land_Cover_Series = data.frame()
+
+for (i in years){
+  for(j in tracts){
+     land2 <- land %>% filter(tract == j)
+     land2 <- st_transform(land2, crs(ras_2016))
+     clipped <- mask(ras_2016, land2)
+     ras <- assign(paste0("ras", i, "_",j), clipped)
+     Land_Cover_Series <- as.data.frame(rbind(butts,(cbind(freq(ras), year=i, tract = j,Land_Cover=c("Developed - Medium/High Intensity","Developed - Low/Medium Intensity","Developed - Forested", "Developed - herbaceous or shrubland", "Cropland","Tree Cover 0-50%", "Tree Cover 50-100%","Herb Cover 0-50%", "Herb Cover 50-100%", "NA"))))) %>% mutate(count = as.numeric(count))
+  }
+}
 
 
 
 
+```
+
+#Merging and Analyzing the Land Cover Series
+#Correlation Matrices
+
+```{r}
+
+class(Land_Cover_Series$year) <- class(land$year)
+Final_Series <- full_join(Land_Cover_Series, land)
+
+library(stats)
+
+Final_Series$Total_Pop <- as.numeric(Final_Series$Total_Pop)
+
+Final_Series <- Final_Series %>%
+  group_by(year,tract) %>%
+  mutate(year_tract_totals = sum(count)) %>%
+  mutate(lc_percentages = round((count/year_tract_totals)*100,2)) %>%
+  mutate(black_p = (Black/Total_Pop)*100)
+
+Final_Series <- Final_Series %>%
+  dplyr::select(year,tract,Land_Cover,Black,black_p,parks_per_capita, parks_per_capita_b,lc_percentages, Total_Pop)
+```
+
+```{r}
+
+library(Hmisc)
+library(stats)
+
+test <- Final_Series %>%
+  # filter(Land_Cover == "Tree Cover 50-100%") %>%
+  filter(Land_Cover == "Tree Cover 0-50%")
+
+attach(test)
+
+#graphing examination
+ggplot(test, aes(x = black_p, y = lc_percentages )) +
+  geom_jitter() +
+  geom_smooth() +
+  geom_jitter(aes(x = black_p, y = parks_per_capita)) +
+  geom_smooth()
+
+
+#correlation tests
+
+
+
+
+#t tests
+stats::t.test(black_p,lc_percentages)
+stats::t.test(black_p,parks_per_capita)
+
+```
 
 
 
