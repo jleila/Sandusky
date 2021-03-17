@@ -24,6 +24,9 @@ final <- read_sf("data/derived/final.shp")
 #must be called because write_sf ruins column names
 final_names <- fread("data/derived/final_colnames.txt")
 names(final) <- names(final_names)
+final <- final %>%
+  mutate(Total_Pop = as.numeric(Total_Pop))
+
 Wetlands3 <- read_sf("data/derived/Wetlands3.shp")
 Neighborhoods <- read_sf("data/source/city/Neighborhoods/City_of_Sandusky_Neighborhoods.shp")
 # Neighborhoods <- st_transform(Neighborhoods, 4326)

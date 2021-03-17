@@ -75,3 +75,80 @@ class(land$park_count)
 class(land$Total_Pop)
 
 ```
+
+
+
+Raster tables
+
+```{r}
+
+a <- as.data.frame(freq(ras_2001))
+b <- left_join(a, as.data.frame(freq(ras_2008)), by = "value")
+c <- left_join(b, as.data.frame(freq(ras_2010)), by = "value")
+d <- left_join(c, as.data.frame(freq(ras_2012)), by = "value")
+e <- left_join(d, as.data.frame(freq(ras_2014)), by = "value")
+f <- left_join(e, as.data.frame(freq(ras_2016)), by = "value")
+
+f <- cbind(f,c("Developed - Medium/High Intensity","Developed - Low/Medium Intensity","Developed - Forested", "Developed - herbaceous or shrubland", "Cropland","Tree Cover 0-50%", "Tree Cover 50-100%","Herb Cover 0-50%", "Herb Cover 50-100%", "NA"))
+
+names(f) <- c("Land Cover ID", "2001 Count", "2008 Count", "2010 Count", "2012 Count", "2014 Count", "2016 Count", "Land Cover Description")
+f[,2]
+f <- rbind(f, c("Totals", sum(f[,2]), sum(f[,3]), sum(f[,4]), sum(f[,4]), sum(f[,5]), sum(f[,6]), sum(f[,7]), "Totals"))
+
+f[11,8] <- "Totals"
+
+raster_table <- f %>%
+  select(`Land Cover ID`, `Land Cover Description`, `2001 Count`,  `2008 Count`, `2010 Count`, `2012 Count`, `2014 Count`, `2016 Count`)
+
+counts <- raster_table[,c(3:8)]
+
+counts <- as.data.frame(counts) 
+
+counts <- counts %>%
+  mutate_if(is.character, as.numeric)
+
+counts <- (counts/1755948)*100
+
+counts2 <- round(counts, digits =2)
+
+final_table <- as.data.frame(cbind(raster_table$`Land Cover ID`, raster_table$`Land Cover Description`, counts2))
+
+names(final_table) <- c("Land Cover ID","Land Cover Description", "2001 Percentage", "2008 Percentage", "2010 Percentage", "2012 Percentage", "2014 Percentage", "2016 Percentage")
+
+print(final_table)
+
+
+
+
+write.table(final_table, file = "mtcars.txt", sep = "\t",
+            row.names = TRUE, col.names = NA)
+
+```
+
+Point 6: Correlation Matrix
+```{r}
+
+#Correlation matrix
+
+#intersect raster and r
+#add park counts
+
+intersect <- intersect(ras_2016, final)
+#https://rspatial.org/raster/rosu/Chapter11.html
+
+```
+
+Point 7: Change in Demographics in Downtown tracts over time:
+
+
+
+
+
+
+
+
+
+
+
+
+
