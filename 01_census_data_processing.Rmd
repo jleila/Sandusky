@@ -404,7 +404,10 @@ final <- full_join(final, final3, by = c("year", "tract"))
 
 final <- final %>% group_by(year) %>% mutate(dplyr::across(where(is.numeric), ~ replace(., sum(.) == 0, NA))) %>% ungroup() %>%
   dplyr::select(year, tract, Total_Pop, Black, White, Native_Hawaiian_or_Pacific_Islander, Asian, Native_American, Other, "MedianRent","Moved in 2015 or later","Moved in 2017 or later","Built 2010 or later","SNAP benefits","Bachelor's degree","Median household income", "Mean household income", Total_Housing_Units, Built_2014_or_Later, Built_2010_or_Later, Moved_In_2010_or_Later, Percent_Service_Occupations, Percent_Production_MaterialMoving_Transportation_Construction_Occupations, Percent_Management_Business_Science_Arts_Occupations,Percent_Sales_and_Office_Occupations, NAMELSAD)
- 
+
+fwrite(final, file="data/derived/final_01.txt")
+
+rm(list=ls())
 ```
 
 
