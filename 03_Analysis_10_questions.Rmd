@@ -288,10 +288,11 @@ pchanges <- graphdata2 %>%
          )
 
 plot4 <- ggplot(pchanges, aes(x=year, y=changerent, fill = tract)) +
-  geom_bar(stat="identity", position = "stack", aes(fill="blue")) +
+  
   geom_bar(stat = "identity", position = "stack",aes(fill = "red",y=changeb))+
+  geom_bar(stat="identity", position = "stack", aes(fill="blue")) +
   geom_bar(stat = "identity", position = "stack",aes(fill = "green",y=changeincome))+
-  labs(x = "Year", y = "Percent change", title = "Percent changes in related subjects by Tract", fill = "Topic") +
+  labs(x = "Year", y = "Percent change", title = "Percent changes in topics of interest by tract", fill = "Topic") +
   facet_wrap(~tract)
 
 plot4 +
@@ -302,6 +303,7 @@ plot4 +
 plot3 <- ggplot(graphdata2, aes(x=year,y=Black, col=tract)) +
   geom_jitter(col="black") + 
   geom_smooth(se = FALSE) +
+  geom_smooth(aes(y=Total_Pop),se = FALSE) +
  # geom_smooth(aes(y = graphdata2$MedianRent)) +
   #geom_smooth(aes(y = graphdata2$`Mean household income`)) +
   labs(title = "Black population changes over time by census tract") +
@@ -315,13 +317,24 @@ plot3 + ggthemes::theme_clean()
 Final Race Table
 
 ```{r}
-ggplot(graphdata2, aes(x=year, y=MedianRent)) +
-  geom_jitter(col="black") + 
-  geom_smooth(se = FALSE) +
- # geom_smooth(aes(y = graphdata2$MedianRent)) +
+#(MedianRent/lead(MedianRent) - 1) * 100
+plot4 <- ggplot(graphdata2, aes(x=year, y=MedianRent)) +
+  geom_bar(stat="identity", fill = "orange",position="stack",aes(y=White/5))+
+  geom_bar(stat="identity", fill = "blue",position="stack",aes(y=Black/5))+
+  
+  geom_bar(stat="identity", fill = "red",position="stack",aes(y=Other))+
+  geom_bar(stat="identity", fill = "green",position="stack",aes(y=Asian))+
+  
+  geom_bar(stat="identity", fill = "pink",position="stack",aes(y=Native_Hawaiian_or_Pacific_Islander))+
+  geom_bar(stat="identity", fill = "purple",position="stack",aes(y=Native_American))+
+  geom_smooth(col = "black", se = FALSE) +
+  
+  # geom_smooth(aes(y = graphdata2$MedianRent)) +
   #geom_smooth(aes(y = graphdata2$`Mean household income`)) + 
-  labs(title = "Black population changes over time by census tract") +
-  facet_wrap(~tract)
+  labs(title = "Demographic changes and Median Rent Changes") +
+  facet_wrap(~tract) 
+
+plot4 + ggthemes::theme_clean()
 
 ```
 Saving Final Table
@@ -341,7 +354,7 @@ final_t <- final %>%
   mutate(`Water Area` = AWATER) %>%
   rename(`Median Rent` = MedianRent) %>%
   mutate(tract = sub("*, Erie.*", "", tract)) %>%
-  select(-c(ALAND,AWATER))
+  dplyr::select(-c(ALAND,AWATER))
 
 st_write(final_t, dsn="data/derived/final_table.shp", delete_dsn= TRUE)
 fwrite(as.list(names(final_t)), file="data/derived/final_table_colnames.txt")
