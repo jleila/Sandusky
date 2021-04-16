@@ -127,7 +127,7 @@ names(final_table) <- c("Land Cover ID","Land Cover Description", "2001 Percenta
 
 print(final_table)
 
-write.table(final_table, file = "mtcars.txt", sep = "\t",
+write.table(final_table, file = "landcoverpercentages.txt", sep = "\t",
             row.names = TRUE, col.names = NA)
 
 ```
