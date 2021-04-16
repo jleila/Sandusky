@@ -25,6 +25,10 @@ library(ggthemes)
 ```
 
 ```{r}
+rm(list=ls())
+```
+
+```{r}
 final <- read_sf("data/derived/final.shp")
 
 final_names <- fread("data/derived/final_colnames.txt")
@@ -74,6 +78,12 @@ class(land$Total_Pop)
 Raster tables
 
 ```{r}
+ras_2001 <- raster::raster("data/derived/ras_2001.gri")
+ras_2008 <- raster::raster("data/derived/ras_2008.gri")
+ras_2010 <- raster::raster("data/derived/ras_2010.gri")
+ras_2012 <- raster::raster("data/derived/ras_2012.gri")
+ras_2014 <- raster::raster("data/derived/ras_2014.gri")
+ras_2016 <- raster::raster("data/derived/ras_2016.gri")
 
 a <- as.data.frame(freq(ras_2001))
 b <- left_join(a, as.data.frame(freq(ras_2008)), by = "value")
@@ -290,8 +300,10 @@ ggplot(graphdata2, aes(x=year, y=MedianRent)) +
  # geom_smooth(aes(y = graphdata2$MedianRent)) +
   #geom_smooth(aes(y = graphdata2$`Mean household income`)) +
   labs(title = "Black population changes over time by census tract") +
+  geom_bar(position = "stack", stat = "identity", aes(y=graphdata2$Native_American)) +
   facet_wrap(~tract)
 
+final$
 ```
 
 
