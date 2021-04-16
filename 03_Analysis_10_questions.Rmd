@@ -30,10 +30,25 @@ library(ggthemes)
 final <- read_sf("data/derived/final.shp")
 
 final_names <- fread("data/derived/final_colnames.txt")
+
 names(final) <- names(final_names)
 
+# names(final) <- gsub("_"," ", names(final))
+
+# names(final)[3] <- "Total Population"
+
+# vars <- names(final)[4:9]
+
+# paste0(vars," Population")
+
+# names(final)[4:9] <- paste0(vars," Population")
+
 final <- final %>%
+  # mutate(`Land Area` = ALAND) %>%
+  # mutate(`Water Area` = AWATER) %>%
+  # rename(`Median Rent` = MedianRent) %>%
   mutate(tract = sub("*, Erie.*", "", tract))
+  
 
 ras_2001 <- raster("data/derived/ras_2001.gri")
 ras_2008 <- raster("data/derived/ras_2008.gri")
@@ -309,9 +324,26 @@ ggplot(graphdata2, aes(x=year, y=MedianRent)) +
   facet_wrap(~tract)
 
 ```
+Saving Final Table
 
+```{r}
 
+names(final) <- gsub("_"," ", names(final))
 
+names(final)[3] <- "Total Population"
 
+vars <- names(final)[4:9]
 
+names(final)[4:9] <- paste0(vars," Population")
 
+final_t <- final %>%
+  mutate(`Land Area` = ALAND) %>%
+  mutate(`Water Area` = AWATER) %>%
+  rename(`Median Rent` = MedianRent) %>%
+  mutate(tract = sub("*, Erie.*", "", tract)) %>%
+  select(-c(ALAND,AWATER))
+
+st_write(final_t, dsn="data/derived/final_table.shp", delete_dsn= TRUE)
+fwrite(as.list(names(final_t)), file="data/derived/final_table_colnames.txt")
+
+```
